@@ -1,11 +1,25 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import axios from "axios";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Briefcase, Building2, Clock, X, ChevronRight, Search } from "lucide-react";
-import { isAuthenticated } from "@/utils/auth";
+import api from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
+
+const parseJobDescription = (text) => {
+  if (!text) return { responsibilities: [], skills: [] };
+  const segments = text
+    .split(/\n|\. /)
+    .map((s) => s.trim().replace(/^\./, "").trim())
+    .filter((s) => s.length > 10);
+  if (segments.length <= 2) return { responsibilities: segments, skills: [] };
+  const splitIndex = Math.ceil(segments.length / 2);
+  return {
+    responsibilities: segments.slice(0, splitIndex),
+    skills: segments.slice(splitIndex)
+  };
+};
 
 export default function JobsPage() {
   const [jobs, setJobs] = useState([]);
@@ -16,6 +30,11 @@ export default function JobsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const router = useRouter();
+  const { ready, isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    if (ready && !isAuthenticated) router.replace("/login");
+  }, [ready, isAuthenticated, router]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -26,66 +45,31 @@ export default function JobsPage() {
   }, [searchInput]);
 
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push("/login");
-      return;
-    }
+    if (!ready || !isAuthenticated) return;
 
     const controller = new AbortController();
     const fetchJobs = async () => {
       try {
-        const url = new URL(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/jobs`);
-        if (searchQuery) {
-          url.searchParams.append("search", searchQuery);
-        }
-        url.searchParams.append("page", currentPage);
-
-        const response = await axios.get(url.toString(), { signal: controller.signal });
-        if (response.data.jobs) {
-          setJobs(response.data.jobs);
-          setTotalPages(response.data.totalPages || 1);
-        } else {
-          setJobs(response.data);
-        }
+        const params = { page: currentPage };
+        if (searchQuery) params.search = searchQuery;
+        const { data } = await api.get("/api/jobs", { params, signal: controller.signal });
+        setJobs(data.jobs || []);
+        setTotalPages(data.totalPages || 1);
         setInitialLoading(false);
       } catch (error) {
-        if (axios.isCancel(error) || error.name === "CanceledError") return;
+        if (error.name === "CanceledError" || error.code === "ERR_CANCELED") return;
         console.error("Failed to fetch jobs:", error);
         setInitialLoading(false);
       }
     };
     fetchJobs();
     return () => controller.abort();
-  }, [router, searchQuery, currentPage]);
-
-  const handleSearch = (e) => {
-    e.preventDefault();
-    setCurrentPage(1); // Reset to first page on new search
-    setSearchQuery(searchInput);
-  };
+  }, [ready, isAuthenticated, searchQuery, currentPage]);
 
   const clearSearch = () => {
     setSearchInput("");
     setSearchQuery("");
     setCurrentPage(1);
-  };
-
-  const parseJobDescription = (text) => {
-    if (!text) return { responsibilities: [], skills: [] };
-    
-    const segments = text.split(/\n|\. /)
-      .map(s => s.trim().replace(/^\./, '').trim())
-      .filter(s => s.length > 10);
-      
-    if (segments.length <= 2) {
-      return { responsibilities: segments, skills: [] };
-    }
-
-    const splitIndex = Math.ceil(segments.length / 2);
-    return {
-      responsibilities: segments.slice(0, splitIndex),
-      skills: segments.slice(splitIndex)
-    };
   };
 
   if (initialLoading) {
@@ -103,7 +87,7 @@ export default function JobsPage() {
         <p className="text-gray-500 mt-2">Find and apply to the best jobs curated for you.</p>
       </div>
 
-      <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3 max-w-3xl">
+      <div className="flex flex-col sm:flex-row gap-3 max-w-3xl">
         <div className="relative flex-1 w-full">
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
             <Search className="h-5 w-5 text-gray-400" />
@@ -118,31 +102,14 @@ export default function JobsPage() {
           {searchInput && (
             <button
               type="button"
-              onClick={() => setSearchInput("")}
+              onClick={clearSearch}
               className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600"
             >
               <X className="h-5 w-5" />
             </button>
           )}
         </div>
-        <div className="flex gap-2 sm:gap-3">
-          <button
-            type="submit"
-            className="flex-1 sm:flex-none h-12 bg-blue-600 hover:bg-blue-700 text-white px-8 rounded-xl font-semibold shadow-md shadow-blue-500/20 transition-colors flex items-center justify-center"
-          >
-            Search
-          </button>
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={clearSearch}
-              className="flex-1 sm:flex-none h-12 bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 rounded-xl font-semibold transition-colors flex items-center justify-center border border-gray-200"
-            >
-              Clear
-            </button>
-          )}
-        </div>
-      </form>
+      </div>
 
       {jobs.length === 0 ? (
         <div className="text-center py-20 bg-white rounded-2xl border border-gray-100 shadow-sm">
@@ -153,8 +120,8 @@ export default function JobsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {jobs.map((job) => (
-            <div 
-              key={job._id} 
+            <div
+              key={job._id}
               className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col h-full"
             >
               <div className="flex-1">
@@ -166,25 +133,25 @@ export default function JobsPage() {
                     Active
                   </span>
                 </div>
-                
+
                 <h2 className="text-xl font-bold text-gray-900 mb-2 line-clamp-1">{job.title}</h2>
-                
+
                 <p className="text-gray-500 text-sm leading-relaxed mb-1">
                   {job.description?.slice(0, 120)}
                   {job.description?.length > 120 ? "..." : ""}
                 </p>
-                
+
                 {job.description?.length > 120 && (
-                  <button 
+                  <button
                     onClick={() => setSelectedJob(job)}
                     className="text-blue-600 hover:text-blue-800 text-sm font-semibold mb-5 flex items-center group transition-colors"
                   >
-                    Read More 
+                    Read More
                     <ChevronRight size={16} className="ml-0.5 group-hover:translate-x-0.5 transition-transform" />
                   </button>
                 )}
-                
-                {job.recruiterId && job.recruiterId.email && (
+
+                {job.recruiterId?.email && (
                   <div className="flex items-center text-xs text-gray-400 mb-6 font-medium mt-auto pt-4">
                     <Clock size={14} className="mr-1.5" />
                     Posted by: {job.recruiterId.email}
@@ -192,7 +159,7 @@ export default function JobsPage() {
                 )}
               </div>
 
-              <Link 
+              <Link
                 href={`/apply/${job._id}`}
                 className="block w-full text-center bg-gray-50 hover:bg-blue-600 text-gray-700 hover:text-white font-semibold py-3 rounded-xl transition-colors border border-gray-100 hover:border-blue-600"
               >
@@ -205,9 +172,9 @@ export default function JobsPage() {
 
       {totalPages > 1 && jobs.length > 0 && (
         <div className="flex justify-center items-center gap-4 mt-12 pb-8">
-          <button 
+          <button
             disabled={currentPage === 1}
-            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
             className="px-5 py-2.5 bg-white border border-gray-200 rounded-xl shadow-sm hover:bg-gray-50 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-gray-700 transition-all"
           >
             Previous
@@ -215,9 +182,9 @@ export default function JobsPage() {
           <span className="text-gray-500 font-medium text-sm bg-gray-50 px-4 py-2 rounded-lg border border-gray-100">
             Page {currentPage} of {totalPages}
           </span>
-          <button 
+          <button
             disabled={currentPage === totalPages}
-            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+            onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
             className="px-5 py-2.5 bg-white border border-gray-200 rounded-xl shadow-sm hover:bg-gray-50 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-gray-700 transition-all"
           >
             Next
@@ -226,9 +193,8 @@ export default function JobsPage() {
       )}
 
       {selectedJob && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col animate-in zoom-in-95 duration-200">
-            
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
             <div className="flex items-center justify-between p-6 border-b border-gray-100">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shrink-0">
@@ -242,7 +208,7 @@ export default function JobsPage() {
                   </span>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={() => setSelectedJob(null)}
                 className="p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
               >
@@ -294,24 +260,22 @@ export default function JobsPage() {
             </div>
 
             <div className="p-6 border-t border-gray-100 bg-gray-50 rounded-b-2xl flex justify-end gap-4">
-              <button 
+              <button
                 onClick={() => setSelectedJob(null)}
                 className="px-6 py-2.5 text-sm font-semibold text-gray-700 hover:text-gray-900 hover:bg-gray-200 rounded-xl transition-colors"
               >
                 Close Preview
               </button>
-              <Link 
+              <Link
                 href={`/apply/${selectedJob._id}`}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2.5 rounded-xl font-semibold transition-colors shadow-md shadow-blue-500/20"
               >
                 Apply for this Role
               </Link>
             </div>
-
           </div>
         </div>
       )}
-
     </div>
   );
 }

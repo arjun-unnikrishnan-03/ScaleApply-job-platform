@@ -1,25 +1,26 @@
 const Redis = require("ioredis");
+const env = require("./env");
+const logger = require("../utils/logger");
 
 const redis = new Redis({
-    host: process.env.REDIS_HOST || "127.0.0.1",
-    port: process.env.REDIS_PORT || 6379,
+    host: env.redis.host,
+    port: env.redis.port,
+    password: env.redis.password,
+    lazyConnect: false,
+    enableOfflineQueue: false,
+    maxRetriesPerRequest: 2,
     retryStrategy(times) {
         if (times > 3) {
-            console.warn("Redis is not running locally. Disabling cache and falling back to MongoDB.");
+            logger.warn("Redis unreachable; cache disabled, fallback to MongoDB");
             return null;
         }
-        const delay = Math.min(times * 50, 2000);
-        return delay;
-    },
-    maxRetriesPerRequest: 3 
+        return Math.min(times * 100, 1000);
+    }
 });
 
-redis.on("connect", () => {
-    console.log("Redis Connected Successfully");
-});
+redis.on("connect", () => logger.info("Redis connected"));
+redis.on("error", (err) => logger.error("Redis error", { error: err.message }));
 
-redis.on("error", (err) => {
-    console.error("Redis Connection Error:", err.message);
-});
+const isReady = () => redis.status === "ready";
 
-module.exports = redis;
+module.exports = { redis, isReady };

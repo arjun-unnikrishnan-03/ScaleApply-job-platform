@@ -1,11 +1,19 @@
 const mongoose = require("mongoose");
 
-const applicationSchema = new mongoose.Schema({
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    jobId: { type: mongoose.Schema.Types.ObjectId, ref: "Job", required: true },
-    resumeUrl: { type: String, required: true },
-    score: Number,
-    explanation: String
-}, { timestamps: true });
+const applicationSchema = new mongoose.Schema(
+    {
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
+        jobId: { type: mongoose.Schema.Types.ObjectId, ref: "Job", required: true, index: true },
+        resumeKey: { type: String, required: true },
+        resumeOriginalName: { type: String },
+        score: { type: Number, default: null },
+        explanation: { type: String, default: null },
+        scoredAt: { type: Date, default: null }
+    },
+    { timestamps: true }
+);
+
+applicationSchema.index({ userId: 1, jobId: 1 }, { unique: true });
+applicationSchema.index({ jobId: 1, score: -1 });
 
 module.exports = mongoose.model("Application", applicationSchema);

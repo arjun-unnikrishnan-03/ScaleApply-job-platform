@@ -1,51 +1,38 @@
-const redis = require("../config/redis");
+const cacheService = require("../services/cacheService");
 
-const cache = (prefix, ttl) => {
-    return async (req, res, next) => {
-        if (redis.status !== "ready") {
-            return next();
+const buildKey = (prefix, req) => {
+    const url = new URL(req.originalUrl, "http://x");
+    const params = [...url.searchParams.entries()].sort(([a], [b]) => a.localeCompare(b));
+    const query = params.map(([k, v]) => `${k}=${v}`).join("&");
+    return `${prefix}:${url.pathname}${query ? `?${query}` : ""}`;
+};
+
+const cache = (prefix, ttlSeconds) => async (req, res, next) => {
+    const key = buildKey(prefix, req);
+    const lockKey = `lock:${key}`;
+
+    const cached = await cacheService.get(key);
+    if (cached) {
+        res.setHeader("X-Cache", "HIT");
+        res.setHeader("Content-Type", "application/json");
+        return res.send(cached);
+    }
+    res.setHeader("X-Cache", "MISS");
+
+    const acquired = await cacheService.acquireLock(lockKey, 2000);
+    const originalJson = res.json.bind(res);
+    res.json = (body) => {
+        if (acquired && res.statusCode >= 200 && res.statusCode < 300) {
+            const payload = JSON.stringify(body);
+            cacheService
+                .set(key, payload, ttlSeconds)
+                .finally(() => cacheService.release(lockKey));
+        } else if (acquired) {
+            cacheService.release(lockKey);
         }
-
-        const key = `${prefix}:${req.originalUrl}`;
-        const lockKey = `lock:${key}`;
-
-        try {
-            const cachedData = await redis.get(key);
-
-            if (cachedData) {
-                console.log(`[Cache Hit] ${key}`);
-                res.setHeader("X-Cache", "HIT");
-                res.setHeader("Content-Type", "application/json");
-                return res.send(cachedData);
-            }
-
-            console.log(`[Cache Miss] ${key}`);
-            res.setHeader("X-Cache", "MISS");
-
-            const acquiredLock = await redis.set(lockKey, "1", "PX", 2000, "NX");
-            
-            const originalJson = res.json.bind(res);
-            res.json = (body) => {
-                if (acquiredLock) {
-                    try {
-                        const jsonString = JSON.stringify(body);
-                        redis.set(key, jsonString, "EX", ttl).then(() => {
-                            console.log(`[Cache Set] ${key}`);
-                            redis.del(lockKey);
-                        });
-                    } catch (e) {
-                        console.error("Cache serialization error:", e.message);
-                    }
-                }
-                return originalJson(body);
-            };
-
-            next();
-        } catch (error) {
-            console.error("Cache Middleware Error:", error.message);
-            next();
-        }
+        return originalJson(body);
     };
+    next();
 };
 
 module.exports = cache;

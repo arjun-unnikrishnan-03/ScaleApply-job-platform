@@ -1,35 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import axios from "axios";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  const { login } = useAuth();
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError("");
-
     try {
-      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/auth/login`, {
-        email,
-        password,
-      });
-      localStorage.setItem("token", response.data.token);
-      localStorage.setItem("role", response.data.role);
-      
-      if (response.data.role === "recruiter") {
-        window.location.href = "/dashboard";
-      } else {
-        window.location.href = "/jobs";
-      }
+      await login(email, password);
     } catch (err) {
       setError(err.response?.data?.message || "Invalid credentials");
     } finally {
@@ -57,6 +44,7 @@ export default function LoginPage() {
             <input
               type="email"
               required
+              autoComplete="email"
               className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               placeholder="you@example.com"
               value={email}
@@ -69,6 +57,7 @@ export default function LoginPage() {
             <input
               type="password"
               required
+              autoComplete="current-password"
               className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               placeholder="••••••••"
               value={password}
@@ -86,7 +75,7 @@ export default function LoginPage() {
         </form>
 
         <div className="mt-6 text-center text-sm text-gray-600 font-medium">
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <Link href="/register" className="text-blue-600 hover:text-blue-700 font-semibold transition-colors">
             Sign up
           </Link>

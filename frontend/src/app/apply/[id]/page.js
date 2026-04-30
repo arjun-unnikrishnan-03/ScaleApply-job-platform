@@ -1,27 +1,49 @@
 "use client";
 
-import { useState, use } from "react";
-import axios from "axios";
+import { useState, useEffect, use } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { UploadCloud, CheckCircle, ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import toast from "react-hot-toast";
+import api from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
+import { getSocket } from "@/lib/socket";
 
 export default function ApplyPage({ params }) {
   const unwrappedParams = use(params);
   const jobId = unwrappedParams.id;
-  
+
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [applicationId, setApplicationId] = useState(null);
+  const [scoring, setScoring] = useState(true);
   const [matchData, setMatchData] = useState(null);
-  const [showToast, setShowToast] = useState(false);
   const router = useRouter();
+  const { ready, isAuthenticated, role } = useAuth();
+
+  useEffect(() => {
+    if (!ready) return;
+    if (!isAuthenticated) router.replace("/login");
+    else if (role !== "candidate") router.replace("/dashboard");
+  }, [ready, isAuthenticated, role, router]);
+
+  useEffect(() => {
+    if (!submitted || !applicationId) return;
+    const socket = getSocket();
+    if (!socket) return;
+    const handler = (data) => {
+      if (String(data.applicationId) !== String(applicationId)) return;
+      setMatchData({ score: data.score, explanation: data.explanation });
+      setScoring(false);
+    };
+    socket.on("application:scored", handler);
+    return () => socket.off("application:scored", handler);
+  }, [submitted, applicationId]);
 
   const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
-    }
+    if (e.target.files?.[0]) setFile(e.target.files[0]);
   };
 
   const handleSubmit = async (e) => {
@@ -30,32 +52,18 @@ export default function ApplyPage({ params }) {
       setError("Please select a resume file.");
       return;
     }
-
     setLoading(true);
     setError("");
 
     const formData = new FormData();
     formData.append("resume", file);
-
     try {
-      const token = localStorage.getItem("token");
-      const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/applications/${jobId}`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      setMatchData({
-        score: response.data.score,
-        explanation: response.data.explanation
+      const { data } = await api.post(`/api/applications/${jobId}`, formData, {
+        headers: { "Content-Type": "multipart/form-data" }
       });
-      setSuccess(true);
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 3000);
+      setApplicationId(data.id);
+      setSubmitted(true);
+      toast.success("Application submitted! Scoring your resume...");
     } catch (err) {
       setError(err.response?.data?.message || "Failed to submit application");
     } finally {
@@ -63,36 +71,45 @@ export default function ApplyPage({ params }) {
     }
   };
 
-  if (success) {
+  if (submitted) {
     return (
-      <>
-        {showToast && (
-          <div className="fixed top-5 right-5 bg-green-500 text-white px-4 py-2 rounded-lg shadow-md z-50 animate-in slide-in-from-top-2">
-            Application submitted successfully
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center max-w-lg mx-auto">
+        <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-6">
+          <CheckCircle className="text-green-500 w-10 h-10" />
+        </div>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Application Sent!</h1>
+        <p className="text-gray-500 mb-8">The recruiter has been notified of your application.</p>
+
+        {scoring && !matchData && (
+          <div className="bg-blue-50 border border-blue-100 rounded-xl p-6 mb-8 w-full">
+            <div className="flex items-center justify-center gap-3">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+              <p className="text-blue-700 text-sm font-medium">AI is scoring your resume...</p>
+            </div>
           </div>
         )}
-        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center max-w-lg mx-auto">
-          <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-6">
-            <CheckCircle className="text-green-500 w-10 h-10" />
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Application Sent!</h1>
-          <p className="text-gray-500 mb-8">The recruiter will be notified of your application.</p>
-          
-          {matchData && matchData.score !== undefined && (
-            <div className="bg-green-50 border border-green-200 rounded-xl p-6 mb-8 text-left w-full shadow-sm">
-              <h3 className="text-lg font-bold text-green-800 mb-2">AI Match Score: {matchData.score}/100</h3>
-              <p className="text-green-700 text-sm leading-relaxed">{matchData.explanation || "No explanation provided."}</p>
-            </div>
-          )}
 
-          <Link 
-            href="/jobs" 
-            className="bg-gray-900 hover:bg-gray-800 text-white px-6 py-3 rounded-lg font-medium transition-colors w-full"
-          >
-            Back to Jobs
-          </Link>
-        </div>
-      </>
+        {matchData && matchData.score !== null && (
+          <div className="bg-green-50 border border-green-200 rounded-xl p-6 mb-8 text-left w-full shadow-sm">
+            <h3 className="text-lg font-bold text-green-800 mb-2">AI Match Score: {matchData.score}/100</h3>
+            <p className="text-green-700 text-sm leading-relaxed">{matchData.explanation || "No explanation provided."}</p>
+          </div>
+        )}
+
+        {matchData && matchData.score === null && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 mb-8 text-left w-full shadow-sm">
+            <h3 className="text-lg font-bold text-yellow-800 mb-2">Match Score Unavailable</h3>
+            <p className="text-yellow-700 text-sm leading-relaxed">{matchData.explanation}</p>
+          </div>
+        )}
+
+        <Link
+          href="/jobs"
+          className="bg-gray-900 hover:bg-gray-800 text-white px-6 py-3 rounded-lg font-medium transition-colors w-full"
+        >
+          Back to Jobs
+        </Link>
+      </div>
     );
   }
 
@@ -108,9 +125,7 @@ export default function ApplyPage({ params }) {
         <p className="text-gray-500 text-sm mb-8">Upload your resume to apply for this position.</p>
 
         {error && (
-          <div className="bg-red-50 text-red-600 p-4 rounded-xl text-sm mb-6 font-medium">
-            {error}
-          </div>
+          <div className="bg-red-50 text-red-600 p-4 rounded-xl text-sm mb-6 font-medium">{error}</div>
         )}
 
         <form onSubmit={handleSubmit}>
@@ -118,7 +133,7 @@ export default function ApplyPage({ params }) {
             <label className="block text-sm font-semibold text-gray-700 mb-3">
               Resume (PDF, DOC, DOCX)
             </label>
-            
+
             <div className="relative border-2 border-dashed border-gray-200 rounded-xl p-8 hover:bg-gray-50 transition-colors group text-center cursor-pointer">
               <input
                 type="file"

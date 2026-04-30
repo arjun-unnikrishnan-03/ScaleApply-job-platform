@@ -1,16 +1,14 @@
 const express = require("express");
-const router = express.Router();
-const { createJob, getJobs } = require("../controllers/jobController");
-const { protect } = require("../middleware/authMiddleware");
+const validate = require("../middleware/validate");
 const cache = require("../middleware/cacheMiddleware");
+const { protect, requireRole } = require("../middleware/authMiddleware");
+const { createJob, getJobs, getMyJobs } = require("../controllers/jobController");
+const { createJobSchema, listJobsQuerySchema } = require("../validators/jobValidators");
 
-// Public route to get all jobs (cached)
-router.get("/", cache("jobs", 120), getJobs);
+const router = express.Router();
 
-// Protected route to get jobs posted by the recruiter
-router.get("/me", protect, require("../controllers/jobController").getMyJobs);
-
-// Protected route to create a new job
-router.post("/", protect, createJob);
+router.get("/", validate(listJobsQuerySchema, "query"), cache("jobs", 120), getJobs);
+router.get("/me", protect, requireRole("recruiter"), getMyJobs);
+router.post("/", protect, requireRole("recruiter"), validate(createJobSchema), createJob);
 
 module.exports = router;

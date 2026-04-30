@@ -1,58 +1,43 @@
-const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const User = require("../models/User");
+const env = require("../config/env");
+const ApiError = require("../utils/ApiError");
+const asyncHandler = require("../utils/asyncHandler");
 
-// REGISTER
-exports.register = async (req, res) => {
+const signToken = (user) =>
+    jwt.sign({ id: user._id.toString(), role: user.role }, env.jwtSecret, { expiresIn: env.jwtExpiresIn });
+
+const register = asyncHandler(async (req, res) => {
+    const { email, password, role } = req.body;
+
+    const hashed = await bcrypt.hash(password, 10);
     try {
-        const { email, password, role } = req.body;
-
-        // Check if user already exists
-        const userExists = await User.findOne({ email });
-        if (userExists) {
-            return res.status(400).json({ message: "User already exists" });
+        const user = await User.create({ email, password: hashed, role });
+        return res.status(201).json({ id: user._id, email: user.email, role: user.role });
+    } catch (err) {
+        // Avoid user enumeration: respond uniformly even on duplicate.
+        if (err.code === 11000) {
+            return res.status(201).json({ id: null, email, role });
         }
-
-        const hashed = await bcrypt.hash(password, 10);
-
-        const user = await User.create({
-            email,
-            password: hashed,
-            role
-        });
-
-        // Omit password from response
-        res.status(201).json({
-            _id: user._id,
-            email: user.email,
-            role: user.role
-        });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Server error during registration" });
+        throw err;
     }
-};
+});
 
-// LOGIN
-exports.login = async (req, res) => {
-    try {
-        const { email, password } = req.body;
+const login = asyncHandler(async (req, res) => {
+    const { email, password } = req.body;
 
-        const user = await User.findOne({ email });
-        if (!user) return res.status(400).json({ message: "Invalid credentials" });
+    const user = await User.findOne({ email });
+    if (!user) throw new ApiError(401, "Invalid credentials");
 
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
+    const ok = await bcrypt.compare(password, user.password);
+    if (!ok) throw new ApiError(401, "Invalid credentials");
 
-        const token = jwt.sign(
-            { id: user._id },
-            process.env.JWT_SECRET,
-            { expiresIn: "1d" }
-        );
+    return res.json({ token: signToken(user), role: user.role, id: user._id });
+});
 
-        res.json({ token, role: user.role });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Server error during login" });
-    }
-};
+const me = asyncHandler(async (req, res) => {
+    res.json({ id: req.user._id, email: req.user.email, role: req.user.role });
+});
+
+module.exports = { register, login, me };
