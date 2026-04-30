@@ -1,107 +1,44 @@
 const Job = require("../models/Job");
+const ApiError = require("../utils/ApiError");
+const asyncHandler = require("../utils/asyncHandler");
+const escapeRegex = require("../utils/escapeRegex");
+const cacheService = require("../services/cacheService");
 
-// @desc    Create a new job
-// @route   POST /api/jobs
-// @access  Private (Recruiters only)
-const createJob = async (req, res) => {
-    try {
-        const { title, description } = req.body;
+const invalidateJobsCache = () => cacheService.invalidatePattern("jobs:*");
 
-        if (!title || !description) {
-            return res.status(400).json({ message: "Please provide title and description" });
-        }
+const createJob = asyncHandler(async (req, res) => {
+    const { title, description } = req.body;
+    const job = await Job.create({ title, description, recruiterId: req.user._id });
+    invalidateJobsCache();
+    res.status(201).json(job);
+});
 
-        const existingJob = await Job.findOne({
-            recruiterId: req.user._id,
-            title,
-            description
-        });
-
-        if (existingJob) {
-            return res.status(400).json({ message: "You have already posted an identical job" });
-        }
-
-        const job = await Job.create({
-            title,
-            description,
-            recruiterId: req.user._id
-        });
-
-        try {
-            const redis = require("../config/redis");
-            if (redis.status === "ready") {
-                const keys = await redis.keys("jobs:*");
-                if (keys.length > 0) {
-                    await redis.del(keys);
-                    console.log(`[Cache Invalidation] Deleted ${keys.length} keys for pattern 'jobs:*'`);
-                }
-            }
-        } catch (redisError) {
-            console.error("Cache Invalidation Error:", redisError.message);
-        }
-
-        res.status(201).json(job);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Server Error: Could not create job" });
+const getJobs = asyncHandler(async (req, res) => {
+    const { search, page, limit } = req.query;
+    const query = {};
+    if (search) {
+        const safe = escapeRegex(search);
+        query.$or = [{ title: { $regex: safe, $options: "i" } }, { description: { $regex: safe, $options: "i" } }];
     }
-};
 
-// @desc    Get all jobs
-// @route   GET /api/jobs
-const getJobs = async (req, res) => {
-    try {
-        const { search, page = 1, limit = 9 } = req.query;
-        let query = {};
-        
-        if (search) {
-            query = {
-                $or: [
-                    { title: { $regex: search, $options: "i" } },
-                    { description: { $regex: search, $options: "i" } }
-                ]
-            };
-        }
+    const skip = (page - 1) * limit;
+    const [total, jobs] = await Promise.all([
+        Job.countDocuments(query),
+        Job.find(query).populate("recruiterId", "email").sort({ createdAt: -1 }).skip(skip).limit(limit).lean()
+    ]);
 
-        const pageNum = parseInt(page);
-        const limitNum = parseInt(limit);
-        const skip = (pageNum - 1) * limitNum;
+    res.json({
+        jobs,
+        currentPage: page,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+        totalJobs: total
+    });
+});
 
-        const total = await Job.countDocuments(query);
-        
-        const jobs = await Job.find(query)
-            .populate("recruiterId", "email")
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limitNum);
+const getMyJobs = asyncHandler(async (req, res) => {
+    if (req.user.role !== "recruiter") throw new ApiError(403, "Forbidden");
+    const jobs = await Job.find({ recruiterId: req.user._id }).sort({ createdAt: -1 }).lean();
+    res.json(jobs);
+});
 
-        res.status(200).json({
-            jobs,
-            currentPage: pageNum,
-            totalPages: Math.ceil(total / limitNum),
-            totalJobs: total
-        });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Server Error: Could not fetch jobs" });
-    }
-};
-
-// @desc    Get jobs posted by recruiter
-// @route   GET /api/jobs/me
-// @access  Private (Recruiters only)
-const getMyJobs = async (req, res) => {
-    try {
-        const jobs = await Job.find({ recruiterId: req.user._id }).sort({ createdAt: -1 });
-        res.status(200).json(jobs);
-    } catch (error) {
-        console.error("Error fetching recruiter jobs:", error);
-        res.status(500).json({ message: "Server Error: Could not fetch jobs" });
-    }
-};
-
-module.exports = {
-    createJob,
-    getJobs,
-    getMyJobs
-};
+module.exports = { createJob, getJobs, getMyJobs };

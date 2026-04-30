@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import axios from "axios";
 import { useRouter } from "next/navigation";
 import { Briefcase, CheckCircle } from "lucide-react";
-import { isAuthenticated, getRole } from "@/utils/auth";
-import Link from "next/link";
+import api from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function PostJobPage() {
   const [title, setTitle] = useState("");
@@ -14,32 +13,24 @@ export default function PostJobPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const router = useRouter();
+  const { ready, isAuthenticated, role } = useAuth();
 
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push("/login");
-    } else if (getRole() !== "recruiter") {
-      router.push("/jobs"); // Candidates can't post jobs
-    }
-  }, [router]);
+    if (!ready) return;
+    if (!isAuthenticated) router.replace("/login");
+    else if (role !== "recruiter") router.replace("/jobs");
+  }, [ready, isAuthenticated, role, router]);
 
   const handlePostJob = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError("");
-
     try {
-      const token = localStorage.getItem("token");
-      await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/jobs`,
-        { title, description },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      await api.post("/api/jobs", { title, description });
       setSuccess(true);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to post job");
+      const issue = err.response?.data?.details?.[0]?.message;
+      setError(issue || err.response?.data?.message || "Failed to post job");
     } finally {
       setLoading(false);
     }
@@ -53,7 +44,7 @@ export default function PostJobPage() {
         </div>
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Job Posted!</h1>
         <p className="text-gray-500 mb-8">Your job listing is now live and visible to candidates.</p>
-        <button 
+        <button
           onClick={() => { setSuccess(false); setTitle(""); setDescription(""); }}
           className="bg-gray-900 hover:bg-gray-800 text-white px-6 py-3 rounded-lg font-medium transition-colors w-full"
         >
@@ -77,9 +68,7 @@ export default function PostJobPage() {
         </div>
 
         {error && (
-          <div className="bg-red-50 text-red-600 p-4 rounded-xl text-sm mb-6 font-medium">
-            {error}
-          </div>
+          <div className="bg-red-50 text-red-600 p-4 rounded-xl text-sm mb-6 font-medium">{error}</div>
         )}
 
         <form onSubmit={handlePostJob} className="space-y-6">
@@ -88,6 +77,7 @@ export default function PostJobPage() {
             <input
               type="text"
               required
+              maxLength={200}
               className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-gray-50 focus:bg-white"
               placeholder="e.g. Senior Frontend Engineer"
               value={title}
@@ -100,6 +90,7 @@ export default function PostJobPage() {
             <textarea
               required
               rows={6}
+              maxLength={10000}
               className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-gray-50 focus:bg-white"
               placeholder="Describe the role, responsibilities, and requirements..."
               value={description}

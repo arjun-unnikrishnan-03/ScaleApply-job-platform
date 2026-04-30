@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import axios from "axios";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import api from "@/lib/api";
 
 export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("candidate"); // Default to candidate
+  const [role, setRole] = useState("candidate");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -17,17 +17,12 @@ export default function RegisterPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
-
     try {
-      await axios.post(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/auth/register`, {
-        email,
-        password,
-        role,
-      });
-      // Redirect to login after successful registration
+      await api.post("/api/auth/register", { email, password, role });
       router.push("/login");
     } catch (err) {
-      setError(err.response?.data?.message || "Registration failed");
+      const issue = err.response?.data?.details?.[0]?.message;
+      setError(issue || err.response?.data?.message || "Registration failed");
     } finally {
       setLoading(false);
     }
@@ -53,6 +48,7 @@ export default function RegisterPage() {
             <input
               type="email"
               required
+              autoComplete="email"
               className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               placeholder="you@example.com"
               value={email}
@@ -61,10 +57,12 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Password</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Password (min 8 characters)</label>
             <input
               type="password"
               required
+              minLength={8}
+              autoComplete="new-password"
               className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               placeholder="••••••••"
               value={password}
@@ -75,28 +73,22 @@ export default function RegisterPage() {
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1.5">I am a...</label>
             <div className="grid grid-cols-2 gap-4">
-              <label className={`cursor-pointer border rounded-xl py-3 text-center text-sm font-medium transition-all ${role === "candidate" ? "border-blue-600 bg-blue-50 text-blue-700" : "border-gray-200 text-gray-600 hover:bg-gray-50"}`}>
-                <input
-                  type="radio"
-                  name="role"
-                  value="candidate"
-                  checked={role === "candidate"}
-                  onChange={(e) => setRole(e.target.value)}
-                  className="hidden"
-                />
-                Candidate
-              </label>
-              <label className={`cursor-pointer border rounded-xl py-3 text-center text-sm font-medium transition-all ${role === "recruiter" ? "border-blue-600 bg-blue-50 text-blue-700" : "border-gray-200 text-gray-600 hover:bg-gray-50"}`}>
-                <input
-                  type="radio"
-                  name="role"
-                  value="recruiter"
-                  checked={role === "recruiter"}
-                  onChange={(e) => setRole(e.target.value)}
-                  className="hidden"
-                />
-                Recruiter
-              </label>
+              {["candidate", "recruiter"].map((option) => (
+                <label
+                  key={option}
+                  className={`cursor-pointer border rounded-xl py-3 text-center text-sm font-medium transition-all ${role === option ? "border-blue-600 bg-blue-50 text-blue-700" : "border-gray-200 text-gray-600 hover:bg-gray-50"}`}
+                >
+                  <input
+                    type="radio"
+                    name="role"
+                    value={option}
+                    checked={role === option}
+                    onChange={(e) => setRole(e.target.value)}
+                    className="hidden"
+                  />
+                  {option.charAt(0).toUpperCase() + option.slice(1)}
+                </label>
+              ))}
             </div>
           </div>
 
