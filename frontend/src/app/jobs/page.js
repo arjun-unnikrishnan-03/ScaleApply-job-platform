@@ -20,7 +20,7 @@ export default function JobsPage() {
 
     const fetchJobs = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/api/jobs");
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/jobs`);
         setJobs(response.data);
       } catch (error) {
         console.error("Failed to fetch jobs:", error);
