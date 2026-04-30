@@ -9,18 +9,7 @@ const jobRoutes = require("./routes/jobRoutes");
 const applicationRoutes = require("./routes/applicationRoutes");
 const app = express();
 
-// 1. Security Headers & NoSQL Injection Prevention
-app.use(helmet());
-app.use(mongoSanitize());
-
-// 2. Global API Rate Limiting (Protects against DDoS)
-const globalLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per window
-    message: { message: "Too many requests from this IP, please try again after 15 minutes" }
-});
-app.use("/api", globalLimiter);
-
+// 1. Core Middlewares
 app.use(cors({
     origin: "*",
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -28,6 +17,18 @@ app.use(cors({
     optionsSuccessStatus: 200
 }));
 app.use(express.json());
+
+// 2. Security Headers & NoSQL Injection Prevention
+app.use(helmet());
+// mongoSanitize() removed due to Express 4.x req.query getter incompatibility crash
+
+// 3. Global API Rate Limiting (Protects against DDoS)
+const globalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    message: { message: "Too many requests from this IP, please try again after 15 minutes" }
+});
+app.use("/api", globalLimiter);
 app.use("/api/auth", authRoutes);
 app.use("/api/jobs", jobRoutes);
 app.use("/api/applications", applicationRoutes);

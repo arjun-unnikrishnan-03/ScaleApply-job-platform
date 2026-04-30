@@ -93,8 +93,8 @@ export default function JobsPage() {
         <p className="text-gray-500 mt-2">Find and apply to the best jobs curated for you.</p>
       </div>
 
-      <form onSubmit={handleSearch} className="flex gap-3 max-w-2xl">
-        <div className="relative flex-1">
+      <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3 max-w-3xl">
+        <div className="relative flex-1 w-full">
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
             <Search className="h-5 w-5 text-gray-400" />
           </div>
@@ -103,7 +103,7 @@ export default function JobsPage() {
             placeholder="Search by job title, skills, or keywords..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            className="block w-full pl-11 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow shadow-sm outline-none"
+            className="block w-full pl-11 pr-10 h-12 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow shadow-sm outline-none"
           />
           {searchInput && (
             <button
@@ -111,25 +111,27 @@ export default function JobsPage() {
               onClick={() => setSearchInput("")}
               className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600"
             >
-              <X className="h-4 w-4" />
+              <X className="h-5 w-5" />
             </button>
           )}
         </div>
-        <button
-          type="submit"
-          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3.5 rounded-xl font-semibold shadow-md shadow-blue-500/20 transition-colors"
-        >
-          Search
-        </button>
-        {searchQuery && (
+        <div className="flex gap-2 sm:gap-3">
           <button
-            type="button"
-            onClick={clearSearch}
-            className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3.5 rounded-xl font-semibold transition-colors"
+            type="submit"
+            className="flex-1 sm:flex-none h-12 bg-blue-600 hover:bg-blue-700 text-white px-8 rounded-xl font-semibold shadow-md shadow-blue-500/20 transition-colors flex items-center justify-center"
           >
-            Clear
+            Search
           </button>
-        )}
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={clearSearch}
+              className="flex-1 sm:flex-none h-12 bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 rounded-xl font-semibold transition-colors flex items-center justify-center border border-gray-200"
+            >
+              Clear
+            </button>
+          )}
+        </div>
       </form>
 
       {jobs.length === 0 ? (
