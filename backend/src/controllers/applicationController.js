@@ -9,45 +9,39 @@ const applyToJob = async (req, res) => {
         const { jobId } = req.params;
         const userId = req.user._id;
 
-        // 1. Validate job exists
         const jobExists = await Job.findById(jobId);
         if (!jobExists) {
             return res.status(404).json({ message: "Job not found" });
         }
 
-        // 2. Validate file uploaded
         if (!req.file) {
             return res.status(400).json({ message: "Please upload a resume (PDF/DOC/DOCX)" });
         }
 
-        // 3. Prevent duplicate applications
         const existingApplication = await Application.findOne({ userId, jobId });
         if (existingApplication) {
             return res.status(400).json({ message: "You have already applied for this job" });
         }
 
-        // 4. Save application initially
         let application = await Application.create({
             userId,
             jobId,
             resumeUrl: req.file.location
         });
 
-        // 5. Trigger AI Scoring (gracefully handle failures without blocking)
         try {
             const { scoreResume } = require("../services/aiService");
             const { getFileBufferFromS3 } = require("../services/s3Service");
             const pdfParse = require("pdf-parse");
             
-            let resumeText = "Resume parsing failed"; // Default fallback
+            let resumeText = "Resume parsing failed";
             
-            // Extract text if it's a PDF
             if (req.file.originalname.toLowerCase().endsWith(".pdf")) {
                 try {
                     const fileBuffer = await getFileBufferFromS3(req.file.location);
                     const pdfData = await pdfParse(fileBuffer);
                     if (pdfData.text) {
-                        resumeText = pdfData.text.slice(0, 3000); // Limit to 3000 chars
+                        resumeText = pdfData.text.slice(0, 3000);
                     }
                 } catch (parseError) {
                     console.error("PDF Parsing Error:", parseError.message);
@@ -67,10 +61,8 @@ const applyToJob = async (req, res) => {
             }
         } catch (aiError) {
             console.error("Non-fatal AI Error:", aiError.message);
-            // We do not fail the request, the application is already safely stored
         }
 
-        // 6. Emit real-time notification via Socket.IO
         try {
             const io = req.app.get("io");
             if (io) {
@@ -102,7 +94,6 @@ const getApplicationsForJob = async (req, res) => {
 
         const { jobId } = req.params;
         
-        // Ensure the job belongs to the recruiter
         const job = await Job.findById(jobId);
         if (!job) return res.status(404).json({ message: "Job not found" });
         if (job.recruiterId.toString() !== req.user._id.toString()) {
@@ -111,7 +102,7 @@ const getApplicationsForJob = async (req, res) => {
 
         const applications = await Application.find({ jobId })
             .populate("userId", "email")
-            .sort({ score: -1 }); // Sort by AI score highest to lowest
+            .sort({ score: -1 });
 
         res.status(200).json(applications);
     } catch (error) {

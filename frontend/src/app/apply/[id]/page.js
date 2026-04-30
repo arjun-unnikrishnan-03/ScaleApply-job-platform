@@ -15,6 +15,7 @@ export default function ApplyPage({ params }) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [matchData, setMatchData] = useState(null);
+  const [showToast, setShowToast] = useState(false);
   const router = useRouter();
 
   const handleFileChange = (e) => {
@@ -53,6 +54,8 @@ export default function ApplyPage({ params }) {
         explanation: response.data.explanation
       });
       setSuccess(true);
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to submit application");
     } finally {
@@ -62,27 +65,34 @@ export default function ApplyPage({ params }) {
 
   if (success) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center max-w-lg mx-auto">
-        <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-6">
-          <CheckCircle className="text-green-500 w-10 h-10" />
-        </div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Application Sent!</h1>
-        <p className="text-gray-500 mb-8">The recruiter will be notified of your application.</p>
-        
-        {matchData && matchData.score !== undefined && (
-          <div className="bg-green-50 border border-green-200 rounded-xl p-6 mb-8 text-left w-full shadow-sm">
-            <h3 className="text-lg font-bold text-green-800 mb-2">AI Match Score: {matchData.score}/100</h3>
-            <p className="text-green-700 text-sm leading-relaxed">{matchData.explanation || "No explanation provided."}</p>
+      <>
+        {showToast && (
+          <div className="fixed top-5 right-5 bg-green-500 text-white px-4 py-2 rounded-lg shadow-md z-50 animate-in slide-in-from-top-2">
+            Application submitted successfully
           </div>
         )}
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center max-w-lg mx-auto">
+          <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-6">
+            <CheckCircle className="text-green-500 w-10 h-10" />
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Application Sent!</h1>
+          <p className="text-gray-500 mb-8">The recruiter will be notified of your application.</p>
+          
+          {matchData && matchData.score !== undefined && (
+            <div className="bg-green-50 border border-green-200 rounded-xl p-6 mb-8 text-left w-full shadow-sm">
+              <h3 className="text-lg font-bold text-green-800 mb-2">AI Match Score: {matchData.score}/100</h3>
+              <p className="text-green-700 text-sm leading-relaxed">{matchData.explanation || "No explanation provided."}</p>
+            </div>
+          )}
 
-        <Link 
-          href="/jobs" 
-          className="bg-gray-900 hover:bg-gray-800 text-white px-6 py-3 rounded-lg font-medium transition-colors w-full"
-        >
-          Back to Jobs
-        </Link>
-      </div>
+          <Link 
+            href="/jobs" 
+            className="bg-gray-900 hover:bg-gray-800 text-white px-6 py-3 rounded-lg font-medium transition-colors w-full"
+          >
+            Back to Jobs
+          </Link>
+        </div>
+      </>
     );
   }
 

@@ -10,7 +10,7 @@ import { isAuthenticated } from "@/utils/auth";
 export default function JobsPage() {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedJob, setSelectedJob] = useState(null); // State for JD Modal
+  const [selectedJob, setSelectedJob] = useState(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -32,21 +32,17 @@ export default function JobsPage() {
     fetchJobs();
   }, [router]);
 
-  // JD Parser: Converts raw text into structured bullet points
   const parseJobDescription = (text) => {
     if (!text) return { responsibilities: [], skills: [] };
     
-    // Split by newlines or periods followed by a space
     const segments = text.split(/\n|\. /)
       .map(s => s.trim().replace(/^\./, '').trim())
-      .filter(s => s.length > 10); // Ignore tiny fragments
+      .filter(s => s.length > 10);
       
-    // If not enough segments, just return it as one big responsibility
     if (segments.length <= 2) {
       return { responsibilities: segments, skills: [] };
     }
 
-    // Heuristically split the segments in half for structure
     const splitIndex = Math.ceil(segments.length / 2);
     return {
       responsibilities: segments.slice(0, splitIndex),
@@ -94,13 +90,11 @@ export default function JobsPage() {
                 
                 <h2 className="text-xl font-bold text-gray-900 mb-2 line-clamp-1">{job.title}</h2>
                 
-                {/* Truncated Description */}
                 <p className="text-gray-500 text-sm leading-relaxed mb-1">
                   {job.description?.slice(0, 120)}
                   {job.description?.length > 120 ? "..." : ""}
                 </p>
                 
-                {/* Read More Button */}
                 {job.description?.length > 120 && (
                   <button 
                     onClick={() => setSelectedJob(job)}
@@ -130,12 +124,10 @@ export default function JobsPage() {
         </div>
       )}
 
-      {/* Expandable JD Modal */}
       {selectedJob && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col animate-in zoom-in-95 duration-200">
             
-            {/* Modal Header */}
             <div className="flex items-center justify-between p-6 border-b border-gray-100">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shrink-0">
@@ -157,13 +149,11 @@ export default function JobsPage() {
               </button>
             </div>
 
-            {/* Modal Body (Scrollable) */}
             <div className="p-6 overflow-y-auto flex-1">
               {(() => {
                 const { responsibilities, skills } = parseJobDescription(selectedJob.description);
                 return (
                   <div className="space-y-8">
-                    {/* Key Responsibilities */}
                     {responsibilities.length > 0 && (
                       <div>
                         <h3 className="text-sm font-bold text-gray-900 uppercase tracking-widest mb-4 flex items-center">
@@ -181,7 +171,6 @@ export default function JobsPage() {
                       </div>
                     )}
 
-                    {/* Skills Required */}
                     {skills.length > 0 && (
                       <div>
                         <h3 className="text-sm font-bold text-gray-900 uppercase tracking-widest mb-4 flex items-center">
@@ -203,7 +192,6 @@ export default function JobsPage() {
               })()}
             </div>
 
-            {/* Modal Footer */}
             <div className="p-6 border-t border-gray-100 bg-gray-50 rounded-b-2xl flex justify-end gap-4">
               <button 
                 onClick={() => setSelectedJob(null)}

@@ -11,7 +11,6 @@ const createJob = async (req, res) => {
             return res.status(400).json({ message: "Please provide title and description" });
         }
 
-        // Duplicate protection: prevent same recruiter from creating exact same job
         const existingJob = await Job.findOne({
             recruiterId: req.user._id,
             title,
@@ -28,7 +27,6 @@ const createJob = async (req, res) => {
             recruiterId: req.user._id
         });
 
-        // Cache Invalidation (CRITICAL)
         try {
             const redis = require("../config/redis");
             if (redis.status === "ready") {
