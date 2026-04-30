@@ -9,7 +9,7 @@ import { isAuthenticated } from "@/utils/auth";
 
 export default function JobsPage() {
   const [jobs, setJobs] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [selectedJob, setSelectedJob] = useState(null);
   const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -18,34 +18,44 @@ export default function JobsPage() {
   const router = useRouter();
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchQuery(searchInput);
+      setCurrentPage(1);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  useEffect(() => {
     if (!isAuthenticated()) {
       router.push("/login");
       return;
     }
 
+    const controller = new AbortController();
     const fetchJobs = async () => {
-      setLoading(true);
       try {
         const url = new URL(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/jobs`);
         if (searchQuery) {
           url.searchParams.append("search", searchQuery);
         }
         url.searchParams.append("page", currentPage);
-        
-        const response = await axios.get(url.toString());
+
+        const response = await axios.get(url.toString(), { signal: controller.signal });
         if (response.data.jobs) {
           setJobs(response.data.jobs);
           setTotalPages(response.data.totalPages || 1);
         } else {
           setJobs(response.data);
         }
+        setInitialLoading(false);
       } catch (error) {
+        if (axios.isCancel(error) || error.name === "CanceledError") return;
         console.error("Failed to fetch jobs:", error);
-      } finally {
-        setLoading(false);
+        setInitialLoading(false);
       }
     };
     fetchJobs();
+    return () => controller.abort();
   }, [router, searchQuery, currentPage]);
 
   const handleSearch = (e) => {
@@ -78,7 +88,7 @@ export default function JobsPage() {
     };
   };
 
-  if (loading) {
+  if (initialLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
