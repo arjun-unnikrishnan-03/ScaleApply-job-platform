@@ -4,13 +4,17 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Briefcase, Building2, Clock, X, ChevronRight } from "lucide-react";
+import { Briefcase, Building2, Clock, X, ChevronRight, Search } from "lucide-react";
 import { isAuthenticated } from "@/utils/auth";
 
 export default function JobsPage() {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedJob, setSelectedJob] = useState(null);
+  const [searchInput, setSearchInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const router = useRouter();
 
   useEffect(() => {
@@ -20,9 +24,21 @@ export default function JobsPage() {
     }
 
     const fetchJobs = async () => {
+      setLoading(true);
       try {
-        const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/jobs`);
-        setJobs(response.data);
+        const url = new URL(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/jobs`);
+        if (searchQuery) {
+          url.searchParams.append("search", searchQuery);
+        }
+        url.searchParams.append("page", currentPage);
+        
+        const response = await axios.get(url.toString());
+        if (response.data.jobs) {
+          setJobs(response.data.jobs);
+          setTotalPages(response.data.totalPages || 1);
+        } else {
+          setJobs(response.data);
+        }
       } catch (error) {
         console.error("Failed to fetch jobs:", error);
       } finally {
@@ -30,7 +46,19 @@ export default function JobsPage() {
       }
     };
     fetchJobs();
-  }, [router]);
+  }, [router, searchQuery, currentPage]);
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    setCurrentPage(1); // Reset to first page on new search
+    setSearchQuery(searchInput);
+  };
+
+  const clearSearch = () => {
+    setSearchInput("");
+    setSearchQuery("");
+    setCurrentPage(1);
+  };
 
   const parseJobDescription = (text) => {
     if (!text) return { responsibilities: [], skills: [] };
@@ -64,6 +92,45 @@ export default function JobsPage() {
         <h1 className="text-3xl font-bold text-gray-900">Explore Opportunities</h1>
         <p className="text-gray-500 mt-2">Find and apply to the best jobs curated for you.</p>
       </div>
+
+      <form onSubmit={handleSearch} className="flex gap-3 max-w-2xl">
+        <div className="relative flex-1">
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <Search className="h-5 w-5 text-gray-400" />
+          </div>
+          <input
+            type="text"
+            placeholder="Search by job title, skills, or keywords..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="block w-full pl-11 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow shadow-sm outline-none"
+          />
+          {searchInput && (
+            <button
+              type="button"
+              onClick={() => setSearchInput("")}
+              className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        <button
+          type="submit"
+          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3.5 rounded-xl font-semibold shadow-md shadow-blue-500/20 transition-colors"
+        >
+          Search
+        </button>
+        {searchQuery && (
+          <button
+            type="button"
+            onClick={clearSearch}
+            className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3.5 rounded-xl font-semibold transition-colors"
+          >
+            Clear
+          </button>
+        )}
+      </form>
 
       {jobs.length === 0 ? (
         <div className="text-center py-20 bg-white rounded-2xl border border-gray-100 shadow-sm">
@@ -121,6 +188,28 @@ export default function JobsPage() {
               </Link>
             </div>
           ))}
+        </div>
+      )}
+
+      {totalPages > 1 && jobs.length > 0 && (
+        <div className="flex justify-center items-center gap-4 mt-12 pb-8">
+          <button 
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            className="px-5 py-2.5 bg-white border border-gray-200 rounded-xl shadow-sm hover:bg-gray-50 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-gray-700 transition-all"
+          >
+            Previous
+          </button>
+          <span className="text-gray-500 font-medium text-sm bg-gray-50 px-4 py-2 rounded-lg border border-gray-100">
+            Page {currentPage} of {totalPages}
+          </span>
+          <button 
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+            className="px-5 py-2.5 bg-white border border-gray-200 rounded-xl shadow-sm hover:bg-gray-50 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-gray-700 transition-all"
+          >
+            Next
+          </button>
         </div>
       )}
 

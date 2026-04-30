@@ -49,11 +49,38 @@ const createJob = async (req, res) => {
 
 // @desc    Get all jobs
 // @route   GET /api/jobs
-// @access  Public
 const getJobs = async (req, res) => {
     try {
-        const jobs = await Job.find().populate("recruiterId", "email");
-        res.status(200).json(jobs);
+        const { search, page = 1, limit = 9 } = req.query;
+        let query = {};
+        
+        if (search) {
+            query = {
+                $or: [
+                    { title: { $regex: search, $options: "i" } },
+                    { description: { $regex: search, $options: "i" } }
+                ]
+            };
+        }
+
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+        const skip = (pageNum - 1) * limitNum;
+
+        const total = await Job.countDocuments(query);
+        
+        const jobs = await Job.find(query)
+            .populate("recruiterId", "email")
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limitNum);
+
+        res.status(200).json({
+            jobs,
+            currentPage: pageNum,
+            totalPages: Math.ceil(total / limitNum),
+            totalJobs: total
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "Server Error: Could not fetch jobs" });
