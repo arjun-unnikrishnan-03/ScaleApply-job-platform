@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  ai-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ai-service
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      # Inject container-specific database and cache hosts (overrides .env for the container network)
+      - QDRANT_HOST=qdrant
+      - REDIS_HOST=redis
+    depends_on:
+      qdrant:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ai-network
+    restart: unless-stopped
+
+  qdrant:
+    image: qdrant/qdrant:v1.9.0
+    container_name: qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    networks:
+      - ai-network
+    healthcheck:
+      # Pings the readyz endpoint of Qdrant
+      test: ["CMD", "curl", "-f", "http://localhost:6333/readyz"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --save 60 1 --loglevel warning
+    networks:
+      - ai-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
+networks:
+  ai-network:
+    driver: bridge
+    # Note: 'internal: true' is not used here because the ai-service requires outbound 
+    # internet access to communicate with the external Gemini API.
+    # A user-defined bridge network isolates container-to-container traffic, restricting 
+    # port routing to internal DNS names (qdrant:6333, redis:6379) inside the network.
+
+volumes:
+  qdrant_storage:
+    name: qdrant_storage
+  redis_data:
+    name: redis_data

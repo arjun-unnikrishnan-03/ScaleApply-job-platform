@@ -1,4 +1,4 @@
-const axios = require("axios");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 const env = require("../config/env");
 const logger = require("../utils/logger");
 
@@ -20,30 +20,25 @@ const extractJson = (raw) => {
     }
 };
 
-const callAzure = async (prompt) => {
-    const { endpoint, key } = env.azureOpenAI;
-    const response = await axios.post(
-        endpoint,
-        {
-            messages: [
-                { role: "system", content: SYSTEM_PROMPT },
-                { role: "user", content: prompt }
-            ],
+const callGemini = async (prompt) => {
+    const genAI = new GoogleGenerativeAI(env.gemini.apiKey);
+    const model = genAI.getGenerativeModel({
+        model: "gemini-flash-latest",
+        systemInstruction: SYSTEM_PROMPT,
+        generationConfig: {
+            responseMimeType: "application/json",
             temperature: 0.1,
-            max_tokens: 400,
-            response_format: { type: "json_object" }
-        },
-        {
-            headers: { "Content-Type": "application/json", "api-key": key },
-            timeout: 20000
+            maxOutputTokens: 800
         }
-    );
-    return response.data?.choices?.[0]?.message?.content;
+    });
+
+    const result = await model.generateContent(prompt);
+    return result.response.text();
 };
 
 const isConfigured = () => {
-    const { endpoint, key } = env.azureOpenAI;
-    return Boolean(endpoint && key && key !== "your_key");
+    const { apiKey } = env.gemini;
+    return Boolean(apiKey && !apiKey.includes("your_key"));
 };
 
 const scoreResume = async ({ resumeText, jobTitle, jobDescription }) => {
@@ -60,7 +55,7 @@ const scoreResume = async ({ resumeText, jobTitle, jobDescription }) => {
     let attempt = 0;
     while (attempt < 2) {
         try {
-            const raw = await callAzure(prompt);
+            const raw = await callGemini(prompt);
             const parsed = extractJson(raw);
             if (parsed && typeof parsed.score === "number") {
                 const score = Math.max(0, Math.min(100, Math.round(parsed.score)));
@@ -68,7 +63,7 @@ const scoreResume = async ({ resumeText, jobTitle, jobDescription }) => {
             }
             logger.warn("AI returned unparseable response", { sample: String(raw).slice(0, 200) });
         } catch (err) {
-            logger.warn("AI call failed", { attempt, error: err.response?.data || err.message });
+            logger.warn("AI call failed", { attempt, error: err.message });
         }
         attempt += 1;
     }

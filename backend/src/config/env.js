@@ -29,8 +29,7 @@ module.exports = {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID,
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
     },
-    azureOpenAI: {
-        endpoint: process.env.AZURE_OPENAI_ENDPOINT,
-        key: process.env.AZURE_OPENAI_KEY
+    gemini: {
+        apiKey: process.env.GEMINI_API_KEY
     }
 };

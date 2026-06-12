@@ -79,4 +79,4 @@ const scoreApplicationAsync = async (applicationId) => {
     });
 };
 
-module.exports = { createApplication };
+module.exports = { createApplication, scoreApplicationAsync };
