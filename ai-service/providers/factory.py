@@ -138,5 +138,11 @@ def _register_builtin_providers() -> None:
     # from providers.ollama_provider import OllamaProvider
     # ProviderFactory.register("ollama", OllamaProvider)
 
+    try:
+        from providers.groq_provider import GroqProvider
+        ProviderFactory.register("groq", GroqProvider)
+    except ImportError as e:
+        logger.warning("GroqProvider not registered: %s", e)
+
 
 _register_builtin_providers()
