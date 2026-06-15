@@ -1,11 +1,12 @@
 import "./globals.css";
 import Navbar from "@/components/Navbar";
+import ChatWidget from "@/components/ChatWidget";
 import { Toaster } from "react-hot-toast";
 import { AuthProvider } from "@/contexts/AuthContext";
 
 export const metadata = {
-  title: "JobSync",
-  description: "Modern job application portal"
+  title: "JobSync - Premium AI-Powered Job Platform",
+  description: "Scale your recruiting and job applications with enterprise-grade AI matching, parsing, and real-time support."
 };
 
 export default function RootLayout({ children }) {
@@ -15,9 +16,10 @@ export default function RootLayout({ children }) {
         <AuthProvider>
           <Toaster position="top-right" />
           <Navbar />
-          <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <main className="w-full">
             {children}
           </main>
+          <ChatWidget />
         </AuthProvider>
       </body>
     </html>

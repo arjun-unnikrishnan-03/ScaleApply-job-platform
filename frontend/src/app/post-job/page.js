@@ -55,7 +55,7 @@ export default function PostJobPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="bg-white p-8 sm:p-10 rounded-2xl shadow-sm border border-gray-100">
         <div className="flex items-center gap-3 mb-8">
           <div className="bg-blue-50 text-blue-600 p-3 rounded-xl">

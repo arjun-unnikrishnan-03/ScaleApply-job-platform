@@ -3,7 +3,7 @@ const Job = require("../models/Job");
 const ApiError = require("../utils/ApiError");
 const logger = require("../utils/logger");
 const { parseResume } = require("./resumeParser");
-const { scoreResume } = require("./aiService");
+const { analyzeResume, evaluateATS } = require("./aiClient");
 const { getFileBuffer } = require("./s3Service");
 const { notifyRecruiterNewApplication, notifyCandidateScored } = require("./notificationService");
 
@@ -52,31 +52,54 @@ const scoreApplicationAsync = async (applicationId) => {
         resumeText = parsed.text;
     } catch (err) {
         logger.warn("Resume fetch/parse failed", { applicationId: applicationId.toString(), error: err.message });
+        return;
     }
 
-    const { score, explanation } = await scoreResume({
-        resumeText,
-        jobTitle: job.title,
-        jobDescription: job.description
-    });
+    try {
+        // 1. Parse raw text into structured CandidateProfile via AI Service
+        const candidateProfile = await analyzeResume(resumeText);
 
-    application.score = score;
-    application.explanation = explanation;
-    application.scoredAt = new Date();
-    await application.save();
+        // 2. Map Mongoose Job to FastAPI JobDescription schema
+        const jobDescription = {
+            title: job.title,
+            company_name: "ScaleApply Client",
+            summary: job.description || "",
+            required_skills: job.title.split(/[\s,/-]+/).filter(w => w.length > 2 && !/^(and|for|with|the)$/i.test(w)) || ["Software"],
+            preferred_skills: [],
+            technologies: [],
+            responsibilities: [],
+            qualifications: []
+        };
 
-    notifyCandidateScored(application.userId.toString(), {
-        applicationId: application._id,
-        jobId: job._id,
-        score,
-        explanation
-    });
-    notifyRecruiterNewApplication(job.recruiterId.toString(), {
-        type: "scored",
-        applicationId: application._id,
-        jobId: job._id,
-        score
-    });
+        // 3. Evaluate ATS Match via AI Service
+        const atsResult = await evaluateATS(candidateProfile, jobDescription);
+
+        // 4. Update Application model with new structured AI fields
+        if (atsResult && atsResult.ats_result) {
+            application.atsResult = atsResult.ats_result;
+            application.score = atsResult.ats_result.score;
+            application.explanation = atsResult.ats_result.explanation;
+            application.skillGapAnalysis = atsResult.ats_result.missing_skills;
+            application.scoredAt = new Date();
+            await application.save();
+
+            notifyCandidateScored(application.userId.toString(), {
+                applicationId: application._id,
+                jobId: job._id,
+                score: atsResult.ats_result.score,
+                explanation: atsResult.ats_result.explanation
+            });
+            notifyRecruiterNewApplication(job.recruiterId.toString(), {
+                type: "scored",
+                applicationId: application._id,
+                jobId: job._id,
+                score: atsResult.ats_result.score
+            });
+        }
+        
+    } catch (err) {
+        logger.error("FastAPI AI Service ATS evaluation failed", { applicationId: applicationId.toString(), error: err.message });
+    }
 };
 
-module.exports = { createApplication };
+module.exports = { createApplication, scoreApplicationAsync };
