@@ -51,7 +51,7 @@ const autoFillProfile = async (req, res) => {
 
         // 4. Save to User Model
         const updatedUser = await User.findByIdAndUpdate(
-            req.user.userId, // From protect middleware
+            req.user._id, // From protect middleware
             { candidateProfile: mappedProfile },
             { new: true, runValidators: false }
         );
