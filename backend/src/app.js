@@ -10,6 +10,7 @@ const { errorHandler, notFound } = require("./middleware/errorHandler");
 const authRoutes = require("./routes/authRoutes");
 const jobRoutes = require("./routes/jobRoutes");
 const applicationRoutes = require("./routes/applicationRoutes");
+const aiRoutes = require("./routes/aiRoutes");
 
 const app = express();
 
@@ -47,6 +48,7 @@ app.get("/healthz", (_req, res) => res.json({ status: "ok", uptime: process.upti
 app.use("/api/auth", authRoutes);
 app.use("/api/jobs", jobRoutes);
 app.use("/api/applications", applicationRoutes);
+app.use("/api/ai", aiRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

@@ -48,16 +48,17 @@ class GeminiProvider(LLMProvider):
     Includes exponential backoff retries and structured logging.
     """
 
-    def __init__(self, api_key: str | None = None, model_name: str | None = None) -> None:
+    def __init__(self, api_key: str | None = None, model_name: str | None = None, model: str | None = None) -> None:
         """
         Initialize the Gemini provider.
 
         Args:
             api_key: The API key. If not provided, reads from settings.gemini_api_key or settings.llm_api_key.
             model_name: The model to use. Defaults to settings.gemini_model.
+            model: Alias for model_name for factory compatibility.
         """
         self.api_key = api_key or settings.gemini_api_key or settings.llm_api_key
-        self.model_name = model_name or settings.gemini_model
+        self.model_name = model or model_name or settings.gemini_model
 
         if not self.api_key:
             raise GeminiAuthenticationError("Gemini API key is not configured.")
@@ -146,14 +147,40 @@ class GeminiProvider(LLMProvider):
         # Make the API call
         # The timeout is handled inside the transport layer typically, but we configure it via the SDK if supported,
         # or rely on the requests layer. Currently, standard SDK usage is sufficient.
+        safety_settings = [
+            {
+                "category": "HARM_CATEGORY_HARASSMENT",
+                "threshold": "BLOCK_NONE",
+            },
+            {
+                "category": "HARM_CATEGORY_HATE_SPEECH",
+                "threshold": "BLOCK_NONE",
+            },
+            {
+                "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                "threshold": "BLOCK_NONE",
+            },
+            {
+                "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                "threshold": "BLOCK_NONE",
+            },
+        ]
+        
         response = self.model.generate_content(
             prompt,
             generation_config=generation_config,
+            safety_settings=safety_settings,
             request_options={"timeout": settings.gemini_timeout_seconds}
         )
         
         latency_ms = (time.perf_counter() - start_time) * 1000
         
+        if response.candidates:
+            candidate = response.candidates[0]
+            logger.info("Gemini Candidate finish reason: %s", candidate.finish_reason)
+            if hasattr(candidate, "safety_ratings") and candidate.safety_ratings:
+                logger.info("Gemini Safety ratings: %s", [dict(category=r.category, probability=r.probability, blocked=r.blocked) for r in candidate.safety_ratings])
+
         if not response or not response.text:
             raise ProviderResponseError("Gemini API returned an empty response.")
 

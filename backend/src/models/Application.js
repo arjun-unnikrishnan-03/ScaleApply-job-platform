@@ -6,9 +6,14 @@ const applicationSchema = new mongoose.Schema(
         jobId: { type: mongoose.Schema.Types.ObjectId, ref: "Job", required: true, index: true },
         resumeKey: { type: String, required: true },
         resumeOriginalName: { type: String },
-        score: { type: Number, default: null },
-        explanation: { type: String, default: null },
-        scoredAt: { type: Date, default: null }
+        score: { type: Number, default: null }, // Legacy generic score
+        explanation: { type: String, default: null }, // Legacy generic explanation
+        scoredAt: { type: Date, default: null },
+        
+        // --- New AI Engine Fields ---
+        atsResult: { type: mongoose.Schema.Types.Mixed, default: null },
+        skillGapAnalysis: { type: mongoose.Schema.Types.Mixed, default: null },
+        recruiterDecision: { type: mongoose.Schema.Types.Mixed, default: null },
     },
     { timestamps: true }
 );

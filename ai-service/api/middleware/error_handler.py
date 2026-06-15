@@ -43,7 +43,7 @@ async def recruitment_error_handler(request: Request, exc: RecruitmentError) -> 
         logger.error("request_id=%s AI provider error: %s", request_id, exc.message)
         return JSONResponse(
             status_code=503,
-            content=_error_body("AI provider unavailable. Please try again later."),
+            content=_error_body("AI LLM quota finished, try again after sometime."),
         )
 
     if isinstance(exc, (QdrantConnectionError, QdrantSearchError)):
@@ -57,7 +57,7 @@ async def recruitment_error_handler(request: Request, exc: RecruitmentError) -> 
         logger.warning("request_id=%s Rate limit hit: %s", request_id, exc.message)
         return JSONResponse(
             status_code=429,
-            content=_error_body("Rate limit exceeded. Please retry after a moment."),
+            content=_error_body("AI LLM quota finished, try again after sometime."),
         )
 
     if isinstance(exc, (DomainValidationError, ExtractionError)):

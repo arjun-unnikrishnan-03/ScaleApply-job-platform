@@ -59,7 +59,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Recruiter Dashboard</h1>
@@ -144,19 +144,37 @@ export default function Dashboard() {
                           </div>
 
                           <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 text-xs text-gray-600 leading-relaxed max-h-32 overflow-y-auto mb-3">
-                            <span className="font-bold text-gray-700 block mb-1">AI Explanation:</span>
+                            <span className="font-bold text-gray-700 block mb-1">AI Reasoning:</span>
                             {app.explanation || "Pending..."}
                           </div>
 
-                          <a
-                            href={app.resumeUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors"
-                          >
-                            <FileText size={14} />
-                            View Resume
-                          </a>
+                          {app.skillGapAnalysis && app.skillGapAnalysis.length > 0 && (
+                            <div className="bg-red-50 p-3 rounded-lg border border-red-100 text-xs text-red-700 mb-3">
+                              <span className="font-bold block mb-1">Missing Skills:</span>
+                              <ul className="list-disc pl-4 space-y-0.5">
+                                {app.skillGapAnalysis.map((skill, idx) => (
+                                  <li key={idx}>{skill}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          <div className="flex items-center gap-3 mt-4">
+                            <a
+                              href={app.resumeUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors"
+                            >
+                              <FileText size={14} />
+                              View Resume
+                            </a>
+                            <button
+                              className="inline-flex items-center gap-1.5 text-xs font-medium bg-gray-900 text-white px-3 py-1.5 rounded hover:bg-gray-800 transition-colors"
+                            >
+                              Generate Interview Guide
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>

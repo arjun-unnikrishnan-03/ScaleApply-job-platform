@@ -25,11 +25,7 @@ def _create_embedding_provider() -> EmbeddingProvider:
 @lru_cache(maxsize=1)
 def _create_vector_store() -> VectorStore:
     """Create and cache the Qdrant vector store singleton."""
-    return QdrantVectorStore(
-        host=settings.qdrant_host,
-        port=settings.qdrant_port,
-        collection_name=settings.qdrant_collection,
-    )
+    return QdrantVectorStore()
 
 
 def get_embedding_provider() -> EmbeddingProvider:

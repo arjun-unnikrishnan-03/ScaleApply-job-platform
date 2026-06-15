@@ -45,6 +45,7 @@ export default function LoginPage() {
               type="email"
               required
               autoComplete="email"
+              suppressHydrationWarning
               className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               placeholder="you@example.com"
               value={email}
@@ -58,6 +59,7 @@ export default function LoginPage() {
               type="password"
               required
               autoComplete="current-password"
+              suppressHydrationWarning
               className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               placeholder="••••••••"
               value={password}
@@ -68,6 +70,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
+            suppressHydrationWarning
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-colors shadow-md shadow-blue-500/20 disabled:opacity-70 disabled:cursor-not-allowed mt-4"
           >
             {loading ? "Signing in..." : "Sign In"}

@@ -37,6 +37,7 @@ class QdrantVectorStore(VectorStore):
         # We assume 768 for gemini text-embedding models unless overriden.
         self.dimension = 768
 
+        self.is_memory_store = False
         try:
             # If a full URL and API key are provided, use those (Qdrant Cloud)
             if settings.qdrant_url and settings.qdrant_api_key:
@@ -49,7 +50,19 @@ class QdrantVectorStore(VectorStore):
                 
             self._ensure_collection_exists()
         except Exception as exc:
-            raise QdrantConnectionError(f"Failed to initialize QdrantClient: {exc}") from exc
+            logger.warning(
+                "Failed to initialize QdrantClient at %s:%s (or cloud URL): %s. "
+                "Falling back to in-memory Qdrant client.",
+                self.host, self.port, exc
+            )
+            try:
+                self.client = QdrantClient(location=":memory:")
+                self.is_memory_store = True
+                logger.info("Initialized in-memory QdrantClient, collection='%s'", self.collection_name)
+                self._ensure_collection_exists()
+            except Exception as mem_exc:
+                logger.critical("Failed to initialize even in-memory QdrantClient: %s", mem_exc)
+                raise QdrantConnectionError(f"Failed to initialize QdrantClient: {mem_exc}") from mem_exc
 
     def _ensure_collection_exists(self) -> None:
         """
@@ -108,12 +121,13 @@ class QdrantVectorStore(VectorStore):
         """
         start_time = time.perf_counter()
         try:
-            results = self.client.search(
+            response = self.client.query_points(
                 collection_name=self.collection_name,
-                query_vector=query_vector,
+                query=query_vector,
                 limit=limit,
                 with_payload=True
             )
+            results = response.points
             duration = (time.perf_counter() - start_time) * 1000
             logger.info("Qdrant search completed in %.2fms, found %d results", duration, len(results))
             
@@ -165,12 +179,13 @@ class QdrantVectorStore(VectorStore):
         """
         start_time = time.perf_counter()
         try:
-            results = self.client.search(
+            response = self.client.query_points(
                 collection_name=self.collection_name,
-                query_vector=query_vector,
+                query=query_vector,
                 limit=limit,
                 with_payload=True
             )
+            results = response.points
             duration = (time.perf_counter() - start_time) * 1000
             logger.info("Qdrant search chunks completed in %.2fms, found %d results", duration, len(results))
             

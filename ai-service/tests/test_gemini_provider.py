@@ -34,8 +34,9 @@ def provider(mock_genai, monkeypatch):
     return GeminiProvider(api_key="test-key", model_name="test-model")
 
 def test_initialization_without_key(monkeypatch):
-    monkeypatch.setenv("GEMINI_API_KEY", "")
-    monkeypatch.setenv("LLM_API_KEY", "")
+    from config.settings import settings
+    monkeypatch.setattr(settings, "gemini_api_key", None)
+    monkeypatch.setattr(settings, "llm_api_key", "")
     with pytest.raises(GeminiAuthenticationError):
         GeminiProvider(api_key="")
 

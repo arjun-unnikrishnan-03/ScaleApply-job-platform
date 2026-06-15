@@ -108,7 +108,8 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
         result = genai.embed_content(
             model=self.model_name,
             content=texts,
-            task_type="retrieval_document" # Suitable for generic knowledge base indexing
+            task_type="retrieval_document", # Suitable for generic knowledge base indexing
+            output_dimensionality=self.dimension
         )
         
         # genai returns a dict like {'embedding': [ [float, ...], ... ]}

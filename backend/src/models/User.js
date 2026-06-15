@@ -7,6 +7,10 @@ const userSchema = new mongoose.Schema({
         type: String,
         enum: ["recruiter", "candidate"],
         required: true
+    },
+    candidateProfile: {
+        type: mongoose.Schema.Types.Mixed,
+        default: null
     }
 }, { timestamps: true });
 

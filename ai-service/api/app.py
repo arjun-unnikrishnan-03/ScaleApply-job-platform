@@ -72,6 +72,48 @@ def create_app() -> FastAPI:
     app.include_router(interview.router)
     app.include_router(recruiter.router)
     app.include_router(knowledge.router)
+    @app.on_event("startup")
+    def on_startup() -> None:
+        print(">>> FastAPI on_startup event handler triggered! <<<", flush=True)
+        from api.dependencies.vectorstores import get_vector_store, get_embedding_provider
+        from api.dependencies.agents import get_embedding_service
+        from indexers.knowledge_indexer import KnowledgeIndexer
+        from loaders.knowledge_loader import KnowledgeLoader
+        from pathlib import Path
+
+        try:
+            vector_store = get_vector_store()
+            is_mem = getattr(vector_store, "is_memory_store", False)
+            print(f">>> Resolved vector store: {vector_store}, is_memory_store={is_mem} <<<", flush=True)
+            if is_mem:
+                print(">>> Starting startup indexing of local knowledge... <<<", flush=True)
+                logger.info("Vector store is using in-memory fallback. Starting startup indexing of local knowledge...")
+                knowledge_dir = Path(__file__).parent.parent / "knowledge"
+                loader = KnowledgeLoader(knowledge_dir)
+                embedding_service = get_embedding_service(
+                    embedding_provider=get_embedding_provider(),
+                    vector_store=vector_store
+                )
+                
+                # Run indexer WITHOUT chunking so that KnowledgeAgent.ask() works properly with complete documents
+                indexer = KnowledgeIndexer(loader, embedding_service)
+                result = indexer.index_all()
+                if result.is_success:
+                    report = result.unwrap()
+                    print(f">>> Startup indexing completed successfully. Total: {report.total_documents}, Indexed: {report.indexed_documents}, Failed: {report.failed_documents} <<<", flush=True)
+                    logger.info(
+                        "Startup indexing completed successfully. Total docs: %d, Indexed: %d, Failed: %d",
+                        report.total_documents,
+                        report.indexed_documents,
+                        report.failed_documents,
+                    )
+                else:
+                    print(f">>> Startup indexing pipeline failed: {result.error} <<<", flush=True)
+                    logger.error("Startup indexing pipeline failed: %s", result.error)
+            else:
+                logger.info("Vector store is not in-memory (persistent database is active). Skipping automatic indexing.")
+        except Exception as exc:
+            logger.exception("Failed during on-startup checks and indexing: %s", exc)
 
     logger.info("ScaleApply AI Platform started | log_level=%s", settings.log_level)
     return app

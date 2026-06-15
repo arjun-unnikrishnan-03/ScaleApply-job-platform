@@ -69,7 +69,9 @@ def test_search_success(store, mock_qdrant_client):
         "tags": []
     }
     
-    mock_qdrant_client.search.return_value = [scored_point]
+    mock_response = MagicMock()
+    mock_response.points = [scored_point]
+    mock_qdrant_client.query_points.return_value = mock_response
     
     results = store.search([0.1, 0.2])
     
@@ -79,7 +81,7 @@ def test_search_success(store, mock_qdrant_client):
 
 def test_search_qdrant_error(store, mock_qdrant_client):
     # Raise a proper qdrant_client unexpected response error with status_code
-    mock_qdrant_client.search.side_effect = qdrant_http_exceptions.UnexpectedResponse(
+    mock_qdrant_client.query_points.side_effect = qdrant_http_exceptions.UnexpectedResponse(
         status_code=500, reason_phrase="Error", content=b"", headers={}
     )
     
