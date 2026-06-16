@@ -5,7 +5,7 @@ import { Toaster } from "react-hot-toast";
 import { AuthProvider } from "@/contexts/AuthContext";
 
 export const metadata = {
-  title: "JobSync - Premium AI-Powered Job Platform",
+  title: "ScaleApply - Premium AI-Powered Job Platform",
   description: "Scale your recruiting and job applications with enterprise-grade AI matching, parsing, and real-time support."
 };
 

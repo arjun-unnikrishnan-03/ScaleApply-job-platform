@@ -41,7 +41,7 @@ export default function Navbar() {
           <div className="bg-gradient-to-tr from-blue-600 to-indigo-600 text-white p-2.5 rounded-xl shadow-md shadow-blue-500/10">
             <Briefcase size={18} />
           </div>
-          <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">JobSync</span>
+          <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">ScaleApply</span>
         </Link>
         <div className="flex items-center gap-4">
           {!isAuthenticated ? (

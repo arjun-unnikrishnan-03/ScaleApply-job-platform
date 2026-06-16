@@ -33,7 +33,7 @@ export default function RegisterPage() {
       <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100">
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Account</h1>
-          <p className="text-gray-500 text-sm">Join JobSync to find or post jobs</p>
+          <p className="text-gray-500 text-sm">Join ScaleApply to find or post jobs</p>
         </div>
 
         {error && (
