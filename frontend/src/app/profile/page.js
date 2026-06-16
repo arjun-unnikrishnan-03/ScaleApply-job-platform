@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { UserCircle, UploadCloud, CheckCircle, Sparkles, Briefcase, GraduationCap, Code } from "lucide-react";
+import { UserCircle, UploadCloud, CheckCircle, Sparkles, Briefcase, GraduationCap, Code, Zap, MapPin, ArrowRight } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,6 +12,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [profile, setProfile] = useState(null);
+  const [recommendations, setRecommendations] = useState(null);
   const router = useRouter();
   const { ready, isAuthenticated, role } = useAuth();
 
@@ -29,6 +30,7 @@ export default function ProfilePage() {
         const { data } = await api.get("/api/auth/me");
         if (data?.candidateProfile) {
           setProfile(data.candidateProfile);
+          fetchRecommendations();
         }
       } catch (err) {
         // No profile yet, that's fine
@@ -38,6 +40,15 @@ export default function ProfilePage() {
     };
     fetchProfile();
   }, [ready, isAuthenticated]);
+
+  const fetchRecommendations = async () => {
+    try {
+      const { data } = await api.get("/api/ai/recommendations");
+      setRecommendations(data);
+    } catch (err) {
+      // Non-critical, ignore silently
+    }
+  };
 
   const handleFileChange = (e) => {
     if (e.target.files?.[0]) setFile(e.target.files[0]);
@@ -61,6 +72,8 @@ export default function ProfilePage() {
       setProfile(data.profile);
       toast.success("Profile auto-filled successfully via AI!");
       setFile(null);
+      // Fetch job recommendations after profile is created
+      fetchRecommendations();
     } catch (err) {
       toast.error(err.response?.data?.error || "Failed to analyze resume.");
     } finally {
@@ -202,6 +215,54 @@ export default function ProfilePage() {
                     ))}
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Job Recommendations Section */}
+          {recommendations?.recommendations?.length > 0 && (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="px-8 py-6 border-b border-gray-100 flex items-center gap-3">
+                <div className="bg-amber-100 p-2 rounded-lg">
+                  <Zap size={20} className="text-amber-600" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">Jobs Matched For You</h2>
+                  <p className="text-sm text-gray-500">Based on your skills: {recommendations.profile?.skills?.join(", ")}</p>
+                </div>
+              </div>
+              <div className="divide-y divide-gray-50">
+                {recommendations.recommendations.map((job) => (
+                  <div key={job._id} className="px-8 py-5 flex items-start justify-between gap-4 hover:bg-gray-50 transition-colors">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-bold text-gray-900 text-sm">{job.title}</h3>
+                        {job.alreadyApplied && (
+                          <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full">Applied</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-gray-400 mt-1">
+                        <span className="font-medium text-gray-600">{job.company}</span>
+                        <span className="flex items-center gap-1"><MapPin size={10} />{job.location}</span>
+                      </div>
+                      {job.matchedSkills?.length > 0 && (
+                        <div className="flex gap-1.5 flex-wrap mt-2">
+                          {job.matchedSkills.map((s, i) => (
+                            <span key={i} className="bg-blue-50 text-blue-600 text-[10px] font-semibold px-2 py-0.5 rounded border border-blue-100">{s}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {!job.alreadyApplied && (
+                      <button
+                        onClick={() => router.push(`/apply/${job._id}`)}
+                        className="shrink-0 flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-all"
+                      >
+                        Apply <ArrowRight size={12} />
+                      </button>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
           )}
