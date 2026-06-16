@@ -37,7 +37,7 @@ const login = asyncHandler(async (req, res) => {
 });
 
 const me = asyncHandler(async (req, res) => {
-    res.json({ id: req.user._id, email: req.user.email, role: req.user.role });
+    res.json({ id: req.user._id, email: req.user.email, role: req.user.role, candidateProfile: req.user.candidateProfile || null });
 });
 
 module.exports = { register, login, me };

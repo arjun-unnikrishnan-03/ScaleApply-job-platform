@@ -5,19 +5,26 @@ import { MessageSquare, X, Send, Sparkles } from "lucide-react";
 import api from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 
+const WELCOME_MESSAGE = {
+  id: "welcome",
+  text: "Hi! I'm your JobSync AI Assistant. Ask me anything about job requirements, career tracks, or preparation guides!",
+  isBot: true
+};
+
 export default function ChatWidget() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState([
-    {
-      id: "welcome",
-      text: "Hi! I'm your JobSync AI Assistant. Ask me anything about job requirements, career tracks, or preparation guides!",
-      isBot: true
-    }
-  ]);
+  const [messages, setMessages] = useState([WELCOME_MESSAGE]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
+
+  // Reset chat history whenever the logged-in user changes (logout / switch account)
+  useEffect(() => {
+    setMessages([WELCOME_MESSAGE]);
+    setInput("");
+    setIsOpen(false);
+  }, [user?.id]);
 
   useEffect(() => {
     if (isOpen) {
@@ -27,6 +34,7 @@ export default function ChatWidget() {
 
   // Don't show the widget unless logged in
   if (!isAuthenticated) return null;
+
 
   const handleSend = async (e) => {
     e.preventDefault();

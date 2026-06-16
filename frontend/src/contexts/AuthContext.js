@@ -15,9 +15,10 @@ export function AuthProvider({ children }) {
     useEffect(() => {
         const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
         const role = typeof window !== "undefined" ? localStorage.getItem("role") : null;
+        const userId = typeof window !== "undefined" ? localStorage.getItem("userId") : null;
         if (token && role) {
             // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrating from localStorage which is unavailable during SSR
-            setUser({ token, role });
+            setUser({ token, role, id: userId });
             connectSocket(token);
         }
         setReady(true);
@@ -28,7 +29,8 @@ export function AuthProvider({ children }) {
         const { data } = await api.post("/api/auth/login", { email, password });
         localStorage.setItem("token", data.token);
         localStorage.setItem("role", data.role);
-        setUser({ token: data.token, role: data.role });
+        localStorage.setItem("userId", data.id);
+        setUser({ token: data.token, role: data.role, id: data.id });
         connectSocket(data.token);
         router.push(data.role === "recruiter" ? "/dashboard" : "/jobs");
         return data;
@@ -37,6 +39,7 @@ export function AuthProvider({ children }) {
     const logout = useCallback(() => {
         localStorage.removeItem("token");
         localStorage.removeItem("role");
+        localStorage.removeItem("userId");
         disconnectSocket();
         setUser(null);
         router.push("/login");

@@ -1,7 +1,7 @@
 const express = require("express");
 const multer = require("multer");
 const { protect, requireRole } = require("../middleware/authMiddleware");
-const { autoFillProfile, queryAIKnowledgeBase } = require("../controllers/aiController");
+const { autoFillProfile, queryAIKnowledgeBase, recommendJobs } = require("../controllers/aiController");
 
 const router = express.Router();
 
@@ -24,6 +24,14 @@ router.post(
     "/knowledge/query",
     protect,
     queryAIKnowledgeBase
+);
+
+// Candidate: Get job recommendations based on saved profile
+router.get(
+    "/recommendations",
+    protect,
+    requireRole("candidate"),
+    recommendJobs
 );
 
 module.exports = router;
