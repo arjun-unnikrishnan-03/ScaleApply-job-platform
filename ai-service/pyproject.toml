@@ -3,7 +3,7 @@ name = "ai-recruitment-service"
 version = "0.1.0"
 description = "Enterprise AI Recruitment Platform — Resume Intelligence Agent"
 authors = ["ScaleApply <team@scaleapply.com>"]
-readme = "README.md"
+package-mode = false
 
 [tool.poetry.dependencies]
 python = ">=3.11"
