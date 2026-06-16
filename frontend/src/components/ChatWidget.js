@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const WELCOME_MESSAGE = {
   id: "welcome",
-  text: "Hi! I'm your JobSync AI Assistant. Ask me anything about job requirements, career tracks, or preparation guides!",
+  text: "Hi! I'm your ScaleApply AI Assistant. Ask me anything about job requirements, career tracks, or preparation guides!",
   isBot: true
 };
 
@@ -88,7 +88,7 @@ export default function ChatWidget() {
         >
           <MessageSquare size={24} />
           <span className="absolute right-14 bg-gray-900 text-white text-xs font-semibold px-3 py-1.5 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none shadow-md">
-            Ask JobSync AI
+            Ask ScaleApply AI
           </span>
           <span className="absolute top-0 right-0 h-3 w-3 rounded-full bg-green-400 border-2 border-white animate-pulse"></span>
         </button>
@@ -104,7 +104,7 @@ export default function ChatWidget() {
                 <Sparkles size={18} className="text-blue-100" />
               </div>
               <div>
-                <h3 className="font-bold text-sm tracking-wide">JobSync AI Support</h3>
+                <h3 className="font-bold text-sm tracking-wide">ScaleApply AI Support</h3>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-ping"></span>
                   <span className="text-[10px] text-blue-100 font-medium">Active & connected</span>

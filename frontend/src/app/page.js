@@ -36,7 +36,7 @@ export default function Home() {
         {/* Release Pill */}
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-100 text-xs font-semibold text-blue-700 mb-8 animate-fade-in shadow-sm hover:scale-105 transition-transform duration-300">
           <Sparkles size={14} className="animate-pulse" />
-          <span>Announcing JobSync v2.5 AI</span>
+          <span>Announcing ScaleApply v2.5 AI</span>
           <span className="h-3 w-px bg-blue-200"></span>
           <span className="text-blue-500 font-medium">Powered by Gemini 2.5 Flash</span>
         </div>
@@ -103,7 +103,7 @@ export default function Home() {
               <span className="h-3.5 w-3.5 rounded-full bg-green-400"></span>
             </div>
             <div className="bg-gray-100 rounded-lg text-xs text-gray-500 font-medium px-6 py-1.5 border border-gray-200/50">
-              platform.jobsync.ai/dashboard
+              platform.scaleapply.ai/dashboard
             </div>
             <div className="w-10"></div>
           </div>
@@ -320,7 +320,7 @@ export default function Home() {
               </li>
             </ul>
             <Link 
-              href="mailto:sales@jobsync.ai" 
+              href="mailto:sales@scaleapply.ai" 
               className="block w-full text-center bg-gray-900 hover:bg-gray-800 text-white font-bold py-3.5 rounded-xl transition-colors"
             >
               Contact Sales
@@ -335,7 +335,7 @@ export default function Home() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 relative z-10">
           <h2 className="text-3xl sm:text-4xl font-bold mb-4">Ready to automate your recruiting?</h2>
           <p className="text-blue-100 max-w-xl mx-auto mb-8 text-sm sm:text-base font-medium">
-            Join thousands of modern recruiters and job applicants saving hours every week with JobSync.
+            Join thousands of modern recruiters and job applicants saving hours every week with ScaleApply.
           </p>
           <Link 
             href={isAuthenticated ? (role === "recruiter" ? "/dashboard" : "/jobs") : "/register"} 
@@ -354,9 +354,9 @@ export default function Home() {
             <div className="bg-blue-600 text-white p-1.5 rounded-lg">
               <Briefcase size={12} />
             </div>
-            <span className="font-extrabold text-sm text-gray-900">JobSync</span>
+            <span className="font-extrabold text-sm text-gray-900">ScaleApply</span>
           </div>
-          <div>© {new Date().getFullYear()} JobSync Inc. All rights reserved. Made for enterprise recruiting.</div>
+          <div>© {new Date().getFullYear()} ScaleApply Inc. All rights reserved. Made for enterprise recruiting.</div>
           <div className="flex gap-4">
             <Link href="#" className="hover:text-gray-600 transition-colors">Privacy Policy</Link>
             <Link href="#" className="hover:text-gray-600 transition-colors">Terms of Service</Link>
