@@ -38,7 +38,7 @@ export default function Home() {
           <Sparkles size={14} className="animate-pulse" />
           <span>Announcing ScaleApply v2.5 AI</span>
           <span className="h-3 w-px bg-blue-200"></span>
-          <span className="text-blue-500 font-medium">Powered by Gemini 2.5 Flash</span>
+          <span className="text-blue-500 font-medium">Powered by Groq</span>
         </div>
 
         {/* Headline */}
